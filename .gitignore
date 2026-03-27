@@ -1,0 +1,34 @@
+# Python cache and bytecode
+__pycache__/
+*.py[cod]
+*.pyo
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Local/editor metadata
+.vscode/
+.idea/
+*.log
+
+# Project outputs and runtime logs
+logs/
+outputs/
+eeg_dss/app/logs/
+eeg_dss/app/outputs/
+
+# Keep code clean of binary model/data artifacts
+*.pkl
+*.joblib
+*.h5
+*.pt
+*.pth
+
+# Large raw datasets should not be in Git history
+data/raw/
+eeg_dss/data/raw/
+
+# Local data staging
+eeg_dss/data/**/raw/
