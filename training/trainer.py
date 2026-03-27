@@ -15,9 +15,6 @@ from sklearn.model_selection import (
 from sklearn.base import clone
 from sklearn.preprocessing import StandardScaler
 from sklearn.ensemble import RandomForestClassifier, HistGradientBoostingClassifier
-from sklearn.ensemble import StackingClassifier
-from sklearn.svm import SVC
-from sklearn.linear_model import LogisticRegression
 from sklearn.pipeline import Pipeline
 
 
@@ -349,52 +346,6 @@ def _build_candidate_specs(
             params = train_cfg.get("hgb_param_grid", {})
             if not params:
                 continue
-        elif model_name in {"stacking", "stacked", "stacking_ensemble"}:
-            rf_base = RandomForestClassifier(
-                random_state=seed,
-                n_jobs=-1,
-                class_weight="balanced",
-            )
-            svm_base = SVC(
-                probability=True,
-                kernel="rbf",
-                class_weight="balanced",
-                random_state=seed,
-            )
-            hgb_base = HistGradientBoostingClassifier(
-                random_state=seed,
-                early_stopping=True,
-            )
-            meta = LogisticRegression(
-                max_iter=2000,
-                class_weight="balanced",
-                random_state=seed,
-            )
-
-            clf = StackingClassifier(
-                estimators=[
-                    ("rf", rf_base),
-                    ("svm", svm_base),
-                    ("hgb", hgb_base),
-                ],
-                final_estimator=meta,
-                stack_method="predict_proba",
-                passthrough=bool(train_cfg.get("stacking_passthrough", False)),
-                cv=int(train_cfg.get("stacking_cv", 3)),
-                n_jobs=-1,
-            )
-
-            params = train_cfg.get("stacking_param_grid", {})
-            if not params:
-                params = {
-                    "rf__n_estimators": [300, 500],
-                    "rf__max_depth": [None, 12],
-                    "svm__C": [0.5, 1.0, 2.0],
-                    "svm__gamma": ["scale", 0.1],
-                    "hgb__max_iter": [200, 400],
-                    "hgb__learning_rate": [0.03, 0.05],
-                    "final_estimator__C": [0.5, 1.0, 2.0],
-                }
         else:
             continue
 

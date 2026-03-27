@@ -97,20 +97,10 @@ if model_ready:
     with c1:
         st.markdown("<div class='clinic-card'>", unsafe_allow_html=True)
         st.metric("Alzheimer Features", len(alz_artifact["feature_names"]))
-        alz_model = (
-            alz_artifact.get("metadata", {}).get("selected_model")
-            or "unknown"
-        )
-        st.caption(f"Selected model: {alz_model}")
         st.markdown("</div>", unsafe_allow_html=True)
     with c2:
         st.markdown("<div class='clinic-card'>", unsafe_allow_html=True)
         st.metric("Depression Features", len(dep_artifact["feature_names"]))
-        dep_model = (
-            dep_artifact.get("metadata", {}).get("selected_model")
-            or "unknown"
-        )
-        st.caption(f"Selected model: {dep_model}")
         st.markdown("</div>", unsafe_allow_html=True)
 
 st.subheader("Upload EEG")
