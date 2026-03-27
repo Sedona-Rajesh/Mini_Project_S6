@@ -32,7 +32,3 @@ eeg_dss/data/raw/
 
 # Local data staging
 eeg_dss/data/**/raw/
-# Accidental generated folder
-{eeg_dss/
-.dist/
-*.egg-info/

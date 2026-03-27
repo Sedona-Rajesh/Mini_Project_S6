@@ -1,0 +1,225 @@
+##############################################################
+# EEG Decision Support System — Master Configuration
+##############################################################
+
+# ── Reproducibility ─────────────────────────────────────────
+random_seed: 42
+
+# ── Data Roots ──────────────────────────────────────────────
+data:
+  raw_root: "data/raw"           # parent dir containing both BIDS datasets
+  alzheimer_dataset: alzheimers_dataset
+  depression_dataset: depression_dataset # folder name inside raw_root
+  output_root: "outputs"
+
+# ── Subject Sampling (set null to use all subjects) ─────────
+sampling:
+  max_subjects_per_dataset: null  # e.g. 20 for quick benchmark
+  balance_classes: true           # always sample balanced when limiting
+  task_max_subjects: {}           # optional per-task caps, e.g. {alzheimer: 120}
+
+# ── Preprocessing ───────────────────────────────────────────
+preprocessing:
+  target_sfreq: 256               # resample target Hz
+  min_eeg_channels: 8             # reject runs with too few channels after harmonization
+  bandpass:
+    l_freq: 0.5
+    h_freq: 45.0
+  notch_freqs: [50.0, 60.0]       # notch both 50 Hz and 60 Hz variants
+  bad_channel_method: "ransac"    # "ransac" | "flat" | "none"
+  bad_channel_flat_std_uv: 0.1    # std threshold for flat-channel fallback
+  interpolate_bad_channels: true
+  run_ica: false                  # ICA is slow; enable for production runs
+  ica_n_components: 20
+  ica_method: "fastica"
+  reference: "average"            # "average" | specific channel e.g. "Cz"
+  epoch_duration_sec: 4.0
+  epoch_overlap_sec: 0.0
+  baseline: null                  # null = no baseline correction for resting
+  reject_peak_to_peak_uv: 150.0   # epoch rejection threshold µV
+  reject_flat_uv: 0.01            # reject near-flat epochs in µV
+  min_epochs_per_run: 3
+  min_epochs_per_subject: 10
+
+# ── Target Montage ──────────────────────────────────────────
+montage:
+  target: "standard_1020"
+  # Channels REQUIRED to be present (after harmonization)
+  required_channels: []           # empty = accept whatever is available
+
+# ── Feature Extraction ──────────────────────────────────────
+features:
+  # Frequency bands (Hz)
+  bands:
+    delta: [0.5, 4.0]
+    theta: [4.0, 8.0]
+    alpha: [8.0, 13.0]
+    beta:  [13.0, 30.0]
+    gamma: [30.0, 45.0]
+
+  # Statistical features per channel
+  statistical: true
+
+  # Spectral features
+  spectral: true
+  spectral_entropy: true
+  asymmetry: true
+  asymmetry_pairs:
+    - ["F3", "F4"]
+    - ["C3", "C4"]
+    - ["P3", "P4"]
+    - ["O1", "O2"]
+  asymmetry_bands: ["theta", "alpha", "beta"]
+  psd_method: "welch"             # "welch" | "multitaper"
+  psd_n_fft: null                 # null = auto
+
+  # Relative band powers
+  relative_power: true
+
+  # Clinically meaningful ratios
+  power_ratios:
+    - ["theta", "alpha"]          # theta/alpha ratio
+    - ["delta", "alpha"]
+    - ["delta", "theta"]
+    - ["alpha", "beta"]
+
+  # Complexity features (Hjorth params, spectral entropy)
+  complexity: true
+  max_nan_fraction: 0.4
+  clip_quantile: 0.001
+
+  # Connectivity (computationally expensive)
+  connectivity: false
+  connectivity_method: "plv"      # "plv" | "coherence"
+
+# ── Alzheimer Dataset Metadata ───────────────────────────────
+alzheimer:
+  group_column: "Group"
+  positive_class_values: ["A"]    # Alzheimer
+  control_class_values:  ["C"]    # Control
+  exclude_values:        ["F"]    # Frontotemporal — exclude
+  label_column_name:     "label"  # column to create in metadata df
+
+# ── Depression Dataset Metadata ──────────────────────────────
+depression:
+  bdi_column: "BDI"
+  bdi_threshold: 14               # BDI >= threshold → positive
+  scid_columns:                   # fallback SCID columns to try, in order
+    - "SCID_MDD"
+    - "SCID_diagnosis"
+    - "diagnosis"
+  scid_positive_values:           # values meaning diagnosed positive
+    - "MDD"
+    - "1"
+    - 1
+    - "positive"
+    - "depressed"
+  label_column_name: "label"
+
+# ── Training ────────────────────────────────────────────────
+training:
+  test_size: 0.25                 # fraction of subjects for test set
+  cv_folds: 5
+  scoring_metric: "roc_auc"
+  search_iterations: 40
+  model_candidates: ["random_forest"]
+  subject_feature_aggregations: ["mean"]
+  overfit:
+    max_cv_train_gap: 0.08
+    gap_penalty: 0.7
+
+  # Random Forest hyperparameter search space
+  rf_param_grid:
+    n_estimators: [200, 400, 700]
+    max_depth: [null, 5, 10, 15, 20]
+    min_samples_split: [2, 5, 10, 20]
+    min_samples_leaf: [1, 2, 4, 8]
+    max_features: ["sqrt", "log2", 0.3, 0.5]
+    class_weight: ["balanced", "balanced_subsample"]
+    criterion: ["gini", "entropy"]
+    bootstrap: [true]
+
+  # HistGradientBoosting hyperparameter search space
+  hgb_param_grid:
+    max_iter: [200, 400]
+    learning_rate: [0.03, 0.05, 0.1]
+    max_depth: [3, 5, null]
+    max_leaf_nodes: [15, 31]
+    min_samples_leaf: [20, 40]
+    l2_regularization: [0.0, 0.01, 0.1]
+
+  # Class imbalance
+  use_class_weight: true
+
+  # Threshold tuning
+  tune_threshold: true
+  threshold_metric: "f1"          # global default threshold objective
+  threshold_grid: [0.35, 0.40, 0.45, 0.50, 0.55, 0.60, 0.65]
+  default_threshold: 0.5
+  depression:
+    cv_folds: 3
+    search_iterations: 50
+    select_k_best: 120
+    model_candidates: ["random_forest", "hist_gradient_boosting"]
+    max_subjects: 80
+    balance_subjects: true
+    threshold_metric: "f1"
+    threshold_grid: [0.30, 0.35, 0.40, 0.45, 0.50, 0.55, 0.60, 0.65]
+  alzheimer:
+    max_subjects: 40
+    balance_subjects: true
+    threshold_metric: "precision"
+    threshold_grid: [0.50, 0.55, 0.60, 0.65, 0.70, 0.75, 0.80, 0.85]
+
+# ── Evaluation ──────────────────────────────────────────────
+evaluation:
+  subject_aggregation: "majority_vote"  # "majority_vote" | "mean_proba"
+  save_confusion_matrix: true
+  save_roc_curve: true
+  save_feature_importance: true
+  top_n_features: 20
+
+# ── Output Paths ────────────────────────────────────────────
+outputs:
+  alzheimer:
+    features: "outputs/alzheimer/features"
+    artifacts: "outputs/alzheimer/artifacts"
+    reports: "outputs/alzheimer/reports"
+  depression:
+    features: "outputs/depression/features"
+    artifacts: "outputs/depression/artifacts"
+    reports: "outputs/depression/reports"
+
+# ── Logging ─────────────────────────────────────────────────
+logging:
+  level: "INFO"         # DEBUG | INFO | WARNING | ERROR
+  log_file: "logs/pipeline.log"
+
+# ── Minimum Result Targets (subject-level) ─────────────────────────────
+minimum_targets:
+  alzheimer:
+    subject_roc_auc: 0.750
+    subject_f1: 0.727
+    subject_precision: 0.800
+  depression:
+    subject_roc_auc: 0.747
+    subject_f1: 0.750
+    subject_precision: 0.600
+
+# ── App/Auth + Prediction Triage ─────────────────────────────
+app:
+  auth_db_path: "outputs/app/users.db"
+
+prediction:
+  triage:
+    min_evidence: 0.10
+    min_separation: 0.10
+    min_model_margin: 0.06
+    min_alzheimer_margin: 0.25
+    min_depression_margin: 0.10
+    control_label: "Healthy"
+  topomap_bands:
+    delta: [0.5, 4.0]
+    theta: [4.0, 8.0]
+    alpha: [8.0, 13.0]
+    beta: [13.0, 30.0]
