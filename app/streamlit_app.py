@@ -1,4 +1,4 @@
-"""Streamlit UI for authenticated, dual-disease EEG triage."""
+"""Streamlit UI for dual-disease EEG triage."""
 
 from __future__ import annotations
 
@@ -47,14 +47,20 @@ def _inject_ui_styles() -> None:
     st.markdown(
         """
         <style>
-        .stApp { background: linear-gradient(180deg, #f7fbfc 0%, #eef5f8 100%); }
+        .stApp {
+            background:
+                radial-gradient(circle at 10% 10%, rgba(0, 255, 214, 0.08), transparent 30%),
+                radial-gradient(circle at 90% 20%, rgba(0, 173, 255, 0.10), transparent 35%),
+                linear-gradient(180deg, #0b1020 0%, #0f172a 100%);
+            color: #dbe8ff;
+        }
         .block-container { padding-top: 1.2rem; }
         .clinic-card {
-            background: #ffffff;
-            border: 1px solid #d8e7ec;
+            background: rgba(16, 24, 48, 0.75);
+            border: 1px solid rgba(0, 255, 214, 0.35);
             border-radius: 14px;
             padding: 1rem 1.2rem;
-            box-shadow: 0 8px 24px rgba(16, 77, 96, 0.08);
+            box-shadow: 0 0 0 1px rgba(0, 255, 214, 0.12), 0 0 24px rgba(0, 173, 255, 0.18);
         }
         .final-chip {
             display: inline-block;
@@ -62,9 +68,39 @@ def _inject_ui_styles() -> None:
             border-radius: 999px;
             font-weight: 700;
             letter-spacing: 0.02em;
-            border: 1px solid #b9d7de;
-            background: #e9f6f9;
-            color: #14526b;
+            border: 1px solid rgba(57, 255, 20, 0.8);
+            background: rgba(57, 255, 20, 0.12);
+            color: #b7ff9b;
+            box-shadow: 0 0 14px rgba(57, 255, 20, 0.35);
+        }
+        .neon-box {
+            background: rgba(8, 14, 30, 0.8);
+            border-left: 4px solid #00ffd6;
+            border-radius: 10px;
+            padding: 0.75rem 0.9rem;
+            margin: 0.35rem 0 0.6rem 0;
+            color: #d5e8ff;
+        }
+        .neon-box b {
+            color: #8ce9ff;
+        }
+        .stButton > button, .stDownloadButton > button {
+            background: linear-gradient(90deg, #00ffd6, #00adff) !important;
+            color: #04111f !important;
+            border: 1px solid #00ffd6 !important;
+            border-radius: 10px !important;
+            font-weight: 700 !important;
+            box-shadow: 0 0 18px rgba(0, 255, 214, 0.35) !important;
+        }
+        .stMetric {
+            background: rgba(14, 22, 44, 0.7);
+            border: 1px solid rgba(0, 173, 255, 0.35);
+            border-radius: 12px;
+            padding: 0.6rem;
+        }
+        [data-testid="stSidebar"] {
+            background: linear-gradient(180deg, #0a1227 0%, #0b1735 100%);
+            border-right: 1px solid rgba(0, 173, 255, 0.25);
         }
         </style>
         """,
@@ -72,14 +108,15 @@ def _inject_ui_styles() -> None:
     )
 
 
+def _render_text_box(text: str, title: str | None = None) -> None:
+    if not text:
+        return
+    prefix = f"<b>{title}</b><br>" if title else ""
+    st.markdown(f"<div class='neon-box'>{prefix}{text}</div>", unsafe_allow_html=True)
+
+
 cfg = _load_config(CONFIG_PATH)
 _inject_ui_styles()
-
-with st.sidebar:
-    st.title("NeuroClinic DSS")
-    st.caption("EEG Triage Workstation")
-    st.divider()
-    st.code(CONFIG_PATH, language=None)
 
 try:
     alz_artifact = _load_artifact("alzheimer", CONFIG_PATH)
@@ -88,6 +125,36 @@ try:
 except Exception as e:
     model_ready = False
     st.error(f"Model loading failed: {e}")
+
+with st.sidebar:
+    st.title("NeuroClinic DSS")
+    st.caption("EEG Triage Workstation")
+    st.divider()
+    st.code(CONFIG_PATH, language=None)
+
+    if model_ready:
+        st.divider()
+        st.markdown("### 🧾 Model Details")
+
+        def _model_details_block(name: str, artifact: dict) -> None:
+            meta = artifact.get("metadata", {})
+            _render_text_box(
+                (
+                    f"Selected model: {meta.get('selected_model', 'unknown')}<br>"
+                    f"Train/Test subjects: {meta.get('n_train_subjects', 'NA')} / {meta.get('n_test_subjects', 'NA')}<br>"
+                    f"CV score: {meta.get('best_cv_score', float('nan')):.3f}"
+                    if isinstance(meta.get('best_cv_score', None), (int, float))
+                    else (
+                        f"Selected model: {meta.get('selected_model', 'unknown')}<br>"
+                        f"Train/Test subjects: {meta.get('n_train_subjects', 'NA')} / {meta.get('n_test_subjects', 'NA')}<br>"
+                        "CV score: NA"
+                    )
+                ),
+                title=name,
+            )
+
+        _model_details_block("Alzheimer", alz_artifact)
+        _model_details_block("Depression", dep_artifact)
 
 st.title("EEG Dual-Disease Triage")
 st.caption("Single upload workflow for Alzheimer vs Depression decision support")
@@ -158,36 +225,31 @@ if uploaded_files and model_ready:
 
     st.markdown("<div class='clinic-card'>", unsafe_allow_html=True)
     st.markdown(f"<span class='final-chip'>Final Prediction: {result['final_prediction']}</span>", unsafe_allow_html=True)
-    st.write(result["decision_reason"])
+    _render_text_box(result["decision_reason"], title="Decision Rationale")
     st.markdown("</div>", unsafe_allow_html=True)
 
     st.subheader("Medical Interpretation")
     interp = result.get("medical_interpretation", {})
     summary = interp.get("summary")
     if summary:
-        st.markdown("<div class='clinic-card'>", unsafe_allow_html=True)
-        st.write(summary)
-        st.markdown("</div>", unsafe_allow_html=True)
+        _render_text_box(summary, title="Summary")
 
     for section in interp.get("sections", []):
         title = section.get("title")
         text = section.get("text")
         if title and text:
-            st.markdown(f"**{title}**")
-            st.write(text)
+            _render_text_box(text, title=title)
 
     st.subheader("Clinical Next Steps")
     rec = result.get("clinical_recommendations", {})
     urgency = rec.get("urgency")
     if urgency:
-        st.markdown("<div class='clinic-card'>", unsafe_allow_html=True)
-        st.write(f"**Recommended Priority:** {urgency}")
-        st.markdown("</div>", unsafe_allow_html=True)
+        _render_text_box(urgency, title="Recommended Priority")
 
     next_steps = rec.get("recommended_next_steps", [])
     if next_steps:
         for step in next_steps:
-            st.markdown(f"- {step}")
+            _render_text_box(step, title="Next Step")
 
     col_a, col_d = st.columns(2)
     with col_a:
@@ -206,10 +268,19 @@ if uploaded_files and model_ready:
         st.markdown("</div>", unsafe_allow_html=True)
 
     st.subheader("Scalp Electrode Layout")
+    _render_text_box(
+        "Electrode layout map is positional only. It confirms channel coverage and scalp locations, not pathology intensity.",
+        title="How To Read This Panel",
+    )
     fig_elec = plot_electrode_positions(result["scalp"]["channels"])
     st.pyplot(fig_elec, use_container_width=True)
 
     st.subheader("Band-Power Topomaps")
+    _render_text_box(
+        "Color meaning (band power maps): darker blue/purple indicates lower relative band power, "
+        "while green/yellow indicates higher relative band power for that band within this EEG sample.",
+        title="Color Legend",
+    )
     band_cols = st.columns(2)
     band_names = list(result["scalp"]["band_power_maps"].keys())
     for i, band in enumerate(band_names[:4]):
@@ -219,10 +290,16 @@ if uploaded_files and model_ready:
                 result["scalp"]["band_power_maps"][band],
                 title=f"{band.capitalize()} Power",
                 cmap="viridis",
+                colorbar_label="Relative band power (normalized)",
             )
             st.pyplot(fig_band, use_container_width=True)
 
     st.subheader("Model Evidence Topomaps")
+    _render_text_box(
+        "Color meaning (evidence maps): red indicates stronger model-supporting evidence for the shown condition, "
+        "blue indicates weaker or opposite evidence, and near-white indicates neutral/low contribution.",
+        title="Color Legend",
+    )
     e1, e2 = st.columns(2)
     with e1:
         fig_alz_map = plot_scalp_topomap(
@@ -230,6 +307,7 @@ if uploaded_files and model_ready:
             result["scalp"]["domain_evidence_maps"]["alzheimer"],
             title="Alzheimer Evidence Map",
             cmap="RdBu_r",
+            colorbar_label="Alzheimer evidence (normalized)",
         )
         st.pyplot(fig_alz_map, use_container_width=True)
     with e2:
@@ -238,6 +316,7 @@ if uploaded_files and model_ready:
             result["scalp"]["domain_evidence_maps"]["depression"],
             title="Depression Evidence Map",
             cmap="RdBu_r",
+            colorbar_label="Depression evidence (normalized)",
         )
         st.pyplot(fig_dep_map, use_container_width=True)
 
@@ -246,7 +325,7 @@ if uploaded_files and model_ready:
     notes = analysis.get("clinical_notes", [])
     if notes:
         for note in notes:
-            st.markdown(f"- {note}")
+            _render_text_box(note, title="Interpretation")
 
     band_region = analysis.get("regional_band_means", {})
     if band_region:

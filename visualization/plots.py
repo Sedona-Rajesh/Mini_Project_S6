@@ -314,6 +314,7 @@ def plot_scalp_topomap(
     title: str,
     montage_name: str = "standard_1020",
     cmap: str = "RdBu_r",
+    colorbar_label: str = "Normalized intensity",
 ):
     """Plot a scalp topomap from channel-aligned values."""
     import matplotlib
@@ -344,6 +345,6 @@ def plot_scalp_topomap(
     im, _ = mne.viz.plot_topomap(vals, pos, axes=ax, show=False, cmap=cmap, contours=0)
     ax.set_title(title)
     cbar = fig.colorbar(im, ax=ax, shrink=0.8)
-    cbar.ax.set_ylabel("Normalized intensity", rotation=90)
+    cbar.ax.set_ylabel(colorbar_label, rotation=90)
     fig.tight_layout()
     return fig
