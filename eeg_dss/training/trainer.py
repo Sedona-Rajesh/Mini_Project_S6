@@ -18,6 +18,77 @@ from sklearn.ensemble import RandomForestClassifier, HistGradientBoostingClassif
 from sklearn.pipeline import Pipeline
 
 
+class GroupAwareStackingClassifier:
+    """StackingClassifier that uses StratifiedGroupKFold for internal CV to prevent data leakage."""
+
+    def __init__(self, estimators, final_estimator, cv=None, n_jobs=None, passthrough=False, groups=None):
+        self.estimators = estimators
+        self.final_estimator = final_estimator
+        self.cv = cv or StratifiedGroupKFold(n_splits=5)
+        self.n_jobs = n_jobs
+        self.passthrough = passthrough
+        self.groups = groups
+
+    def fit(self, X, y):
+        from sklearn.ensemble import StackingClassifier
+        from sklearn.model_selection import cross_val_predict
+
+        # Fit base estimators on full training data
+        fitted_estimators = []
+        for name, estimator in self.estimators:
+            fitted_est = clone(estimator).fit(X, y)
+            fitted_estimators.append((name, fitted_est))
+
+        # Get out-of-fold predictions for meta-learner training
+        # Use groups if provided to ensure no data leakage
+        cv_kwargs = {'groups': self.groups} if self.groups is not None else {}
+        meta_features = []
+        for name, estimator in fitted_estimators:
+            if hasattr(estimator, 'predict_proba'):
+                oof_pred = cross_val_predict(
+                    estimator, X, y, cv=self.cv, method='predict_proba',
+                    n_jobs=self.n_jobs, **cv_kwargs
+                )[:, 1]
+            else:
+                oof_pred = cross_val_predict(
+                    estimator, X, y, cv=self.cv, n_jobs=self.n_jobs, **cv_kwargs
+                )
+            meta_features.append(oof_pred.reshape(-1, 1))
+
+        meta_X = np.hstack(meta_features)
+        if self.passthrough:
+            meta_X = np.hstack([X, meta_X])
+
+        # Fit meta-learner
+        self.final_estimator_ = clone(self.final_estimator).fit(meta_X, y)
+
+        # Store fitted base estimators
+        self.named_estimators_ = dict(fitted_estimators)
+
+        return self
+
+    def predict_proba(self, X):
+        # Get predictions from base estimators
+        meta_features = []
+        for name, estimator in self.named_estimators_.items():
+            if hasattr(estimator, 'predict_proba'):
+                pred = estimator.predict_proba(X)[:, 1]
+            else:
+                pred = estimator.predict(X)
+            meta_features.append(pred.reshape(-1, 1))
+
+        meta_X = np.hstack(meta_features)
+        if self.passthrough:
+            meta_X = np.hstack([X, meta_X])
+
+        # Get final prediction from meta-learner
+        return self.final_estimator_.predict_proba(meta_X)
+
+    def predict(self, X):
+        proba = self.predict_proba(X)
+        return (proba[:, 1] >= 0.5).astype(int)
+
+
 def train_model(
     feature_table: pd.DataFrame,
     task: str,
@@ -346,6 +417,30 @@ def _build_candidate_specs(
             params = train_cfg.get("hgb_param_grid", {})
             if not params:
                 continue
+        elif model_name == "stacking_ensemble":
+            from sklearn.ensemble import StackingClassifier
+            from sklearn.svm import SVC
+            from sklearn.linear_model import LogisticRegression
+
+            estimators = [
+                ("rf", RandomForestClassifier(random_state=seed, class_weight="balanced", n_jobs=-1)),
+                ("svc", SVC(probability=True, random_state=seed, class_weight="balanced")),
+                ("hgb", HistGradientBoostingClassifier(random_state=seed, early_stopping=True))
+            ]
+            clf = StackingClassifier(
+                estimators=estimators,
+                final_estimator=LogisticRegression(random_state=seed, class_weight="balanced", max_iter=1000),
+                cv=5,
+                n_jobs=-1,
+                passthrough=False
+            )
+            params = train_cfg.get("stacking_param_grid", {})
+            if not params:
+                params = {
+                    "rf__n_estimators": [200, 400],
+                    "svc__C": [0.1, 1.0, 10.0],
+                    "hgb__learning_rate": [0.05, 0.1]
+                }
         else:
             continue
 
