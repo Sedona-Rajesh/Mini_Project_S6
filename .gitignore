@@ -15,12 +15,24 @@ env/
 
 # Project outputs and runtime logs
 logs/
-outputs/
+outputs/*
+!outputs/alzheimer/
+outputs/alzheimer/*
+!outputs/alzheimer/artifacts/
+outputs/alzheimer/artifacts/*
+!outputs/alzheimer/artifacts/*.pkl
+!outputs/depression/
+outputs/depression/*
+!outputs/depression/artifacts/
+outputs/depression/artifacts/*
+!outputs/depression/artifacts/*.pkl
 eeg_dss/app/logs/
 eeg_dss/app/outputs/
 
 # Keep code clean of binary model/data artifacts
 *.pkl
+!outputs/alzheimer/artifacts/alzheimer_model.pkl
+!outputs/depression/artifacts/depression_model.pkl
 *.joblib
 *.h5
 *.pt
