@@ -126,49 +126,8 @@ except Exception as e:
     model_ready = False
     st.error(f"Model loading failed: {e}")
 
-with st.sidebar:
-    st.title("NeuroClinic DSS")
-    st.caption("EEG Triage Workstation")
-    st.divider()
-    st.code(CONFIG_PATH, language=None)
-
-    if model_ready:
-        st.divider()
-        st.markdown("### 🧾 Model Details")
-
-        def _model_details_block(name: str, artifact: dict) -> None:
-            meta = artifact.get("metadata", {})
-            _render_text_box(
-                (
-                    f"Selected model: {meta.get('selected_model', 'unknown')}<br>"
-                    f"Train/Test subjects: {meta.get('n_train_subjects', 'NA')} / {meta.get('n_test_subjects', 'NA')}<br>"
-                    f"CV score: {meta.get('best_cv_score', float('nan')):.3f}"
-                    if isinstance(meta.get('best_cv_score', None), (int, float))
-                    else (
-                        f"Selected model: {meta.get('selected_model', 'unknown')}<br>"
-                        f"Train/Test subjects: {meta.get('n_train_subjects', 'NA')} / {meta.get('n_test_subjects', 'NA')}<br>"
-                        "CV score: NA"
-                    )
-                ),
-                title=name,
-            )
-
-        _model_details_block("Alzheimer", alz_artifact)
-        _model_details_block("Depression", dep_artifact)
-
 st.title("EEG Dual-Disease Triage")
 st.caption("Single upload workflow for Alzheimer vs Depression decision support")
-
-if model_ready:
-    c1, c2 = st.columns(2)
-    with c1:
-        st.markdown("<div class='clinic-card'>", unsafe_allow_html=True)
-        st.metric("Alzheimer Features", len(alz_artifact["feature_names"]))
-        st.markdown("</div>", unsafe_allow_html=True)
-    with c2:
-        st.markdown("<div class='clinic-card'>", unsafe_allow_html=True)
-        st.metric("Depression Features", len(dep_artifact["feature_names"]))
-        st.markdown("</div>", unsafe_allow_html=True)
 
 st.subheader("Upload EEG")
 uploaded_files = st.file_uploader(
