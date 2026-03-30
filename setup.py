@@ -7,7 +7,7 @@ setup(
     packages=find_packages(exclude=["tests*", "scripts*"]),
     python_requires=">=3.9",
     install_requires=[
-        "numpy>=1.24,<2.0",
+        "numpy>=1.24",
         "scipy>=1.10",
         "pandas>=2.0",
         "pyarrow>=12.0",

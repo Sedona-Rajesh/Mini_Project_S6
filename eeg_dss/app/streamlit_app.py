@@ -126,49 +126,8 @@ except Exception as e:
     model_ready = False
     st.error(f"Model loading failed: {e}")
 
-with st.sidebar:
-    st.title("NeuroClinic DSS")
-    st.caption("EEG Triage Workstation")
-    st.divider()
-    st.code(CONFIG_PATH, language=None)
-
-    if model_ready:
-        st.divider()
-        st.markdown("### 🧾 Model Details")
-
-        def _model_details_block(name: str, artifact: dict) -> None:
-            meta = artifact.get("metadata", {})
-            _render_text_box(
-                (
-                    f"Selected model: {meta.get('selected_model', 'unknown')}<br>"
-                    f"Train/Test subjects: {meta.get('n_train_subjects', 'NA')} / {meta.get('n_test_subjects', 'NA')}<br>"
-                    f"CV score: {meta.get('best_cv_score', float('nan')):.3f}"
-                    if isinstance(meta.get('best_cv_score', None), (int, float))
-                    else (
-                        f"Selected model: {meta.get('selected_model', 'unknown')}<br>"
-                        f"Train/Test subjects: {meta.get('n_train_subjects', 'NA')} / {meta.get('n_test_subjects', 'NA')}<br>"
-                        "CV score: NA"
-                    )
-                ),
-                title=name,
-            )
-
-        _model_details_block("Alzheimer", alz_artifact)
-        _model_details_block("Depression", dep_artifact)
-
 st.title("EEG Dual-Disease Triage")
 st.caption("Single upload workflow for Alzheimer vs Depression decision support")
-
-if model_ready:
-    c1, c2 = st.columns(2)
-    with c1:
-        st.markdown("<div class='clinic-card'>", unsafe_allow_html=True)
-        st.metric("Alzheimer Features", len(alz_artifact["feature_names"]))
-        st.markdown("</div>", unsafe_allow_html=True)
-    with c2:
-        st.markdown("<div class='clinic-card'>", unsafe_allow_html=True)
-        st.metric("Depression Features", len(dep_artifact["feature_names"]))
-        st.markdown("</div>", unsafe_allow_html=True)
 
 st.subheader("Upload EEG")
 uploaded_files = st.file_uploader(
@@ -223,127 +182,151 @@ if uploaded_files and model_ready:
         shutil.rmtree(temp_dir, ignore_errors=True)
         st.stop()
 
-    st.markdown("<div class='clinic-card'>", unsafe_allow_html=True)
-    st.markdown(f"<span class='final-chip'>Final Prediction: {result['final_prediction']}</span>", unsafe_allow_html=True)
-    _render_text_box(result["decision_reason"], title="Decision Rationale")
-    st.markdown("</div>", unsafe_allow_html=True)
+    tab_summary, tab_details, tab_visuals = st.tabs([
+        "🩺 Clinical Summary", 
+        "📊 Analysis Details", 
+        "🗺️ Visualizations"
+    ])
 
-    st.subheader("Medical Interpretation")
-    interp = result.get("medical_interpretation", {})
-    summary = interp.get("summary")
-    if summary:
-        _render_text_box(summary, title="Summary")
+    with tab_summary:
+        st.markdown(
+            f"""
+            <div class='clinic-card'>
+                <span class='final-chip'>Final Prediction: {result['final_prediction']}</span>
+                <p style='margin-top: 1rem; margin-bottom: 0;'><strong>Decision Rationale:</strong> {result['decision_reason']}</p>
+            </div><br>
+            """,
+            unsafe_allow_html=True
+        )
 
-    for section in interp.get("sections", []):
-        title = section.get("title")
-        text = section.get("text")
-        if title and text:
-            _render_text_box(text, title=title)
+        st.subheader("Medical Interpretation")
+        interp = result.get("medical_interpretation", {})
+        summary = interp.get("summary")
+        
+        mi_html = "<div class='clinic-card'>"
+        if summary:
+            mi_html += f"<p style='margin-bottom: 0.5rem;'><b>Summary:</b> {summary}</p><hr style='margin: 0.5rem 0; border-color: rgba(255,255,255,0.1);'/>"
 
-    st.subheader("Clinical Next Steps")
-    rec = result.get("clinical_recommendations", {})
-    urgency = rec.get("urgency")
-    if urgency:
-        _render_text_box(urgency, title="Recommended Priority")
+        sections = interp.get("sections", [])
+        if sections:
+            for section in sections:
+                title = section.get("title", "")
+                text = section.get("text", "")
+                if title and text:
+                    mi_html += f"<p style='margin-bottom: 0.5rem;'><b>{title}:</b> {text}</p>"
+        mi_html += "</div><br>"
+        st.markdown(mi_html, unsafe_allow_html=True)
 
-    next_steps = rec.get("recommended_next_steps", [])
-    if next_steps:
-        for step in next_steps:
-            _render_text_box(step, title="Next Step")
+        st.subheader("Clinical Next Steps")
+        rec = result.get("clinical_recommendations", {})
+        urgency = rec.get("urgency")
+        if urgency:
+            if "Routine" in urgency:
+                st.info(f"**Recommended Priority:** {urgency}")
+            else:
+                st.warning(f"**Recommended Priority:** {urgency}")
 
-    col_a, col_d = st.columns(2)
-    with col_a:
-        st.markdown("<div class='clinic-card'>", unsafe_allow_html=True)
-        st.subheader("Alzheimer Model")
-        st.metric("Probability", f"{result['alzheimer']['probability']:.1%}")
-        st.metric("Evidence Score", f"{result['alzheimer']['evidence_score']:.3f}")
-        st.caption(result["alzheimer"]["predicted_class"])
-        st.markdown("</div>", unsafe_allow_html=True)
-    with col_d:
-        st.markdown("<div class='clinic-card'>", unsafe_allow_html=True)
-        st.subheader("Depression Model")
-        st.metric("Probability", f"{result['depression']['probability']:.1%}")
-        st.metric("Evidence Score", f"{result['depression']['evidence_score']:.3f}")
-        st.caption(result["depression"]["predicted_class"])
-        st.markdown("</div>", unsafe_allow_html=True)
+        next_steps = rec.get("recommended_next_steps", [])
+        if next_steps:
+            ns_html = "<div class='clinic-card'><ul style='margin-bottom: 0;'>"
+            for step in next_steps:
+                ns_html += f"<li>{step}</li>"
+            ns_html += "</ul></div><br>"
+            st.markdown(ns_html, unsafe_allow_html=True)
 
-    st.subheader("Scalp Electrode Layout")
-    _render_text_box(
-        "Electrode layout map is positional only. It confirms channel coverage and scalp locations, not pathology intensity.",
-        title="How To Read This Panel",
-    )
-    fig_elec = plot_electrode_positions(result["scalp"]["channels"])
-    st.pyplot(fig_elec, use_container_width=True)
+    with tab_details:
+        st.subheader("Model Probabilities & Scores")
+        col_a, col_d = st.columns(2)
+        with col_a:
+            st.subheader("Alzheimer Model")
+            st.metric("Probability", f"{result['alzheimer']['probability']:.1%}")
+            st.metric("Evidence Score", f"{result['alzheimer']['evidence_score']:.3f}")
+            st.caption(result["alzheimer"]["predicted_class"])
+        with col_d:
+            st.subheader("Depression Model")
+            st.metric("Probability", f"{result['depression']['probability']:.1%}")
+            st.metric("Evidence Score", f"{result['depression']['evidence_score']:.3f}")
+            st.caption(result["depression"]["predicted_class"])
 
-    st.subheader("Band-Power Topomaps")
-    _render_text_box(
-        "Color meaning (band power maps): darker blue/purple indicates lower relative band power, "
-        "while green/yellow indicates higher relative band power for that band within this EEG sample.",
-        title="Color Legend",
-    )
-    band_cols = st.columns(2)
-    band_names = list(result["scalp"]["band_power_maps"].keys())
-    for i, band in enumerate(band_names[:4]):
-        with band_cols[i % 2]:
-            fig_band = plot_scalp_topomap(
-                result["scalp"]["channels"],
-                result["scalp"]["band_power_maps"][band],
-                title=f"{band.capitalize()} Power",
-                cmap="viridis",
-                colorbar_label="Relative band power (normalized)",
+        st.markdown("<br>", unsafe_allow_html=True)
+        st.subheader("Topomap Interpretation")
+        analysis = result.get("scalp", {}).get("analysis", {})
+        notes = analysis.get("clinical_notes", [])
+        if notes:
+            for note in notes:
+                _render_text_box(note, title="Interpretation")
+
+        band_region = analysis.get("regional_band_means", {})
+        if band_region:
+            rows = []
+            for band, regions in band_region.items():
+                row = {"band": band}
+                row.update(regions)
+                rows.append(row)
+            if rows:
+                import pandas as pd
+                st.caption("Regional normalized mean values extracted from current scalp maps")
+                st.dataframe(pd.DataFrame(rows), use_container_width=True)
+
+    with tab_visuals:
+        with st.expander("Scalp Electrode Layout", expanded=False):
+            _render_text_box(
+                "Electrode layout map is positional only. It confirms channel coverage and scalp locations, not pathology intensity.",
+                title="How To Read This Panel",
             )
-            st.pyplot(fig_band, use_container_width=True)
+            fig_elec = plot_electrode_positions(result["scalp"]["channels"])
+            st.pyplot(fig_elec, use_container_width=True)
 
-    st.subheader("Model Evidence Topomaps")
-    _render_text_box(
-        "Color meaning (evidence maps): red indicates stronger model-supporting evidence for the shown condition, "
-        "blue indicates weaker or opposite evidence, and near-white indicates neutral/low contribution.",
-        title="Color Legend",
-    )
-    e1, e2 = st.columns(2)
-    with e1:
-        fig_alz_map = plot_scalp_topomap(
-            result["scalp"]["channels"],
-            result["scalp"]["domain_evidence_maps"]["alzheimer"],
-            title="Alzheimer Evidence Map",
-            cmap="RdBu_r",
-            colorbar_label="Alzheimer evidence (normalized)",
-        )
-        st.pyplot(fig_alz_map, use_container_width=True)
-    with e2:
-        fig_dep_map = plot_scalp_topomap(
-            result["scalp"]["channels"],
-            result["scalp"]["domain_evidence_maps"]["depression"],
-            title="Depression Evidence Map",
-            cmap="RdBu_r",
-            colorbar_label="Depression evidence (normalized)",
-        )
-        st.pyplot(fig_dep_map, use_container_width=True)
+        with st.expander("Band-Power Topomaps", expanded=True):
+            _render_text_box(
+                "Color meaning (band power maps): darker blue/purple indicates lower relative band power, "
+                "while green/yellow indicates higher relative band power for that band within this EEG sample.",
+                title="Color Legend",
+            )
+            band_cols = st.columns(2)
+            band_names = list(result["scalp"]["band_power_maps"].keys())
+            for i, band in enumerate(band_names[:4]):
+                with band_cols[i % 2]:
+                    fig_band = plot_scalp_topomap(
+                        result["scalp"]["channels"],
+                        result["scalp"]["band_power_maps"][band],
+                        title=f"{band.capitalize()} Power",
+                        cmap="viridis",
+                        colorbar_label="Relative band power (normalized)",
+                    )
+                    st.pyplot(fig_band, use_container_width=True)
 
-    st.subheader("Topomap Interpretation")
-    analysis = result.get("scalp", {}).get("analysis", {})
-    notes = analysis.get("clinical_notes", [])
-    if notes:
-        for note in notes:
-            _render_text_box(note, title="Interpretation")
+        with st.expander("Model Evidence Topomaps", expanded=True):
+            _render_text_box(
+                "Color meaning (evidence maps): red indicates stronger model-supporting evidence for the shown condition, "
+                "blue indicates weaker or opposite evidence, and near-white indicates neutral/low contribution.",
+                title="Color Legend",
+            )
+            e1, e2 = st.columns(2)
+            with e1:
+                fig_alz_map = plot_scalp_topomap(
+                    result["scalp"]["channels"],
+                    result["scalp"]["domain_evidence_maps"]["alzheimer"],
+                    title="Alzheimer Evidence Map",
+                    cmap="RdBu_r",
+                    colorbar_label="Alzheimer evidence (normalized)",
+                )
+                st.pyplot(fig_alz_map, use_container_width=True)
+            with e2:
+                fig_dep_map = plot_scalp_topomap(
+                    result["scalp"]["channels"],
+                    result["scalp"]["domain_evidence_maps"]["depression"],
+                    title="Depression Evidence Map",
+                    cmap="RdBu_r",
+                    colorbar_label="Depression evidence (normalized)",
+                )
+                st.pyplot(fig_dep_map, use_container_width=True)
 
-    band_region = analysis.get("regional_band_means", {})
-    if band_region:
-        rows = []
-        for band, regions in band_region.items():
-            row = {"band": band}
-            row.update(regions)
-            rows.append(row)
-        if rows:
-            import pandas as pd
+        with st.expander("PSD Preview", expanded=False):
+            raw_preview = load_raw(input_path)
+            fig_psd = plot_raw_psd(raw_preview, task="triage")
+            st.pyplot(fig_psd, use_container_width=True)
 
-            st.caption("Regional normalized mean values extracted from current scalp maps")
-            st.dataframe(pd.DataFrame(rows), use_container_width=True)
-
-    st.subheader("PSD Preview")
-    raw_preview = load_raw(input_path)
-    fig_psd = plot_raw_psd(raw_preview, task="triage")
-    st.pyplot(fig_psd, use_container_width=True)
 
     st.download_button(
         label="Download Triage JSON",
