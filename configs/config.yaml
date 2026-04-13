@@ -120,10 +120,11 @@ depression:
 training:
   test_size: 0.25                 # fraction of subjects for test set
   cv_folds: 5
-  scoring_metric: "roc_auc"
+  scoring_metric: "f1"
   search_iterations: 40
-  model_candidates: ["random_forest", "hist_gradient_boosting", "stacking_ensemble"]
-  subject_feature_aggregations: ["mean"]
+  model_candidates: ["stacking_ensemble"]
+  subject_feature_aggregations: ["mean", "std", "median"]
+  stack_passthrough: true
   overfit:
     max_cv_train_gap: 0.08
     gap_penalty: 0.7
@@ -149,12 +150,15 @@ training:
     l2_regularization: [0.0, 0.01, 0.1]
 
   stacking_param_grid:
-    rf__n_estimators: [200, 400]
-    rf__max_depth: [10, null]
-    svc__C: [0.1, 1.0, 10.0]
-    svc__gamma: ["scale", "auto"]
-    hgb__learning_rate: [0.05, 0.1]
-    hgb__max_depth: [3, 5]
+    rf__n_estimators: [300, 600, 900]
+    rf__max_depth: [10, 20, null]
+    rf__min_samples_split: [2, 5]
+    rf__min_samples_leaf: [1, 2, 4]
+    svc__C: [0.5, 1.0, 3.0, 10.0, 30.0]
+    svc__gamma: ["scale", "auto", 0.01, 0.1]
+    hgb__learning_rate: [0.03, 0.05, 0.1]
+    hgb__max_depth: [3, 5, 7]
+    final_estimator__C: [0.5, 1.0, 2.0, 5.0]
 
   # Class imbalance
   use_class_weight: true
@@ -165,18 +169,21 @@ training:
   threshold_grid: [0.35, 0.40, 0.45, 0.50, 0.55, 0.60, 0.65]
   default_threshold: 0.5
   depression:
-    cv_folds: 3
-    search_iterations: 50
-    select_k_best: 120
-    model_candidates: ["random_forest", "hist_gradient_boosting", "stacking_ensemble"]
-    max_subjects: 80
+    cv_folds: 5
+    search_iterations: 80
+    scoring_metric: "precision"
+    select_k_best: 180
+    model_candidates: ["stacking_ensemble"]
+    max_subjects: null
     balance_subjects: true
-    threshold_metric: "f1"
-    threshold_grid: [0.30, 0.35, 0.40, 0.45, 0.50, 0.55, 0.60, 0.65]
+    threshold_metric: "precision"
+    threshold_min_precision: 0.80
+    threshold_min_accuracy: 0.80
+    threshold_grid: [0.55, 0.60, 0.65, 0.70, 0.75, 0.80, 0.85, 0.90, 0.95]
   alzheimer:
     max_subjects: 40
     balance_subjects: true
-    threshold_metric: "precision"
+    threshold_metric: "f1"
     threshold_grid: [0.50, 0.55, 0.60, 0.65, 0.70, 0.75, 0.80, 0.85]
 
 # ── Evaluation ──────────────────────────────────────────────
@@ -186,6 +193,8 @@ evaluation:
   save_roc_curve: true
   save_feature_importance: true
   top_n_features: 20
+  depression:
+    subject_aggregation: "mean_proba"
 
 # ── Output Paths ────────────────────────────────────────────
 outputs:
@@ -206,13 +215,13 @@ logging:
 # ── Minimum Result Targets (subject-level) ─────────────────────────────
 minimum_targets:
   alzheimer:
-    subject_roc_auc: 0.750
-    subject_f1: 0.727
+    subject_accuracy: 0.800
     subject_precision: 0.800
+    subject_f1: 0.800
   depression:
-    subject_roc_auc: 0.747
-    subject_f1: 0.750
-    subject_precision: 0.600
+    subject_accuracy: 0.800
+    subject_precision: 0.800
+    subject_f1: 0.800
 
 # ── App/Auth + Prediction Triage ─────────────────────────────
 app:

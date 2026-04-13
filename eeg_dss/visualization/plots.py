@@ -18,6 +18,7 @@ import numpy as np
 import pandas as pd
 
 logger = logging.getLogger(__name__)
+_TRAPZ = np.trapz if hasattr(np, "trapz") else np.trapezoid
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -213,7 +214,7 @@ def plot_band_topomaps(raw, bands: dict[str, list[float]], max_bands: int = 4):
         if not np.any(band_mask):
             band_power = np.zeros(len(picks))
         else:
-            band_power = np.trapz(psd_data[:, band_mask], freqs[band_mask], axis=1)
+            band_power = _TRAPZ(psd_data[:, band_mask], freqs[band_mask], axis=1)
 
         mne.viz.plot_topomap(
             band_power,

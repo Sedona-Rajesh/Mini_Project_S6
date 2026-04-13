@@ -28,6 +28,7 @@ from eeg_dss.preprocessing.pipeline import make_epochs, preprocess_raw
 from eeg_dss.training.trainer import load_model_artifact
 
 logger = logging.getLogger(__name__)
+_TRAPZ = np.trapz if hasattr(np, "trapz") else np.trapezoid
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -306,7 +307,7 @@ def _compute_band_power_maps(epochs, cfg: Config) -> dict[str, list[float]]:
         freqs, psd = welch(ch_signal, fs=sfreq, nperseg=min(n_fft, len(ch_signal)))
         for band, (lo, hi) in bands.items():
             idx = (freqs >= float(lo)) & (freqs < float(hi))
-            power = float(np.trapz(psd[idx], freqs[idx])) if np.any(idx) else 0.0
+            power = float(_TRAPZ(psd[idx], freqs[idx])) if np.any(idx) else 0.0
             maps[band].append(power)
 
     for band, vals in maps.items():

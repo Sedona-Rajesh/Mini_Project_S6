@@ -9,6 +9,7 @@ from mne import Epochs
 from eeg_dss.config import Config
 
 logger = logging.getLogger(__name__)
+_TRAPZ = np.trapz if hasattr(np, "trapz") else np.trapezoid
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -100,7 +101,7 @@ def _spectral_features(data, ch_names, sfreq, feat_cfg):
             band_powers = {}
             for b, (lo, hi) in bands.items():
                 idx = (freqs >= lo) & (freqs < hi)
-                power = np.trapz(psd[idx], freqs[idx]) if np.any(idx) else 0
+                power = _TRAPZ(psd[idx], freqs[idx]) if np.any(idx) else 0
                 band_powers[b] = power
                 abs_row[f"{ch}_abs_{b}"] = power
 
@@ -253,7 +254,7 @@ def _asymmetry_features(data, ch_names, sfreq, feat_cfg):
             for b, (lo, hi) in bands.items():
                 idx = (freqs >= lo) & (freqs < hi)
                 band_powers[b] = (
-                    np.trapz(psd[idx], freqs[idx]) if np.any(idx) else 0.0
+                    _TRAPZ(psd[idx], freqs[idx]) if np.any(idx) else 0.0
                 )
             total = sum(band_powers.values()) + eps
             rel_by_ch[ch] = {b: p / total for b, p in band_powers.items()}

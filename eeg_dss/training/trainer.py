@@ -202,13 +202,27 @@ def train_model(
         "threshold_grid",
         train_cfg.get("threshold_grid", [0.35, 0.4, 0.45, 0.5, 0.55, 0.6, 0.65]),
     )
+    threshold_min_precision = float(
+        task_train_cfg.get(
+            "threshold_min_precision",
+            train_cfg.get("threshold_min_precision", 0.0),
+        )
+        or 0.0
+    )
+    threshold_min_accuracy = float(
+        task_train_cfg.get(
+            "threshold_min_accuracy",
+            train_cfg.get("threshold_min_accuracy", 0.0),
+        )
+        or 0.0
+    )
     search_metric = str(task_train_cfg.get("scoring_metric", train_cfg.get("scoring_metric", "roc_auc")))
     overfit_cfg = train_cfg.get("overfit", {}) or {}
     max_cv_train_gap = float(overfit_cfg.get("max_cv_train_gap", 0.08))
     gap_penalty = float(overfit_cfg.get("gap_penalty", 0.5))
 
     # ── 5. Cross-validation ─────────────────────────────────────────────
-    cv = StratifiedGroupKFold(n_splits=cv_folds)
+    cv = StratifiedGroupKFold(n_splits=cv_folds, shuffle=True, random_state=seed)
     n_iter = int(task_train_cfg.get("search_iterations", train_cfg.get("search_iterations", 30)))
 
     candidate_specs = _build_candidate_specs(
@@ -291,7 +305,14 @@ def train_model(
             method="predict_proba",
             n_jobs=-1,
         )[:, 1]
-        threshold = _select_threshold(y_train, cv_proba, threshold_metric, threshold_grid)
+        threshold = _select_threshold(
+            y_train,
+            cv_proba,
+            threshold_metric,
+            threshold_grid,
+            threshold_min_precision=threshold_min_precision,
+            threshold_min_accuracy=threshold_min_accuracy,
+        )
         print(f"Tuned threshold ({threshold_metric}): {threshold:.3f}")
     else:
         threshold = float(task_train_cfg.get("default_threshold", train_cfg.get("default_threshold", 0.5)))
@@ -359,6 +380,8 @@ def _select_threshold(
     y_proba: np.ndarray,
     metric: str,
     threshold_grid,
+    threshold_min_precision: float = 0.0,
+    threshold_min_accuracy: float = 0.0,
 ) -> float:
     from sklearn.metrics import (
         accuracy_score,
@@ -379,6 +402,8 @@ def _select_threshold(
 
     best_t = 0.5
     best_score = -np.inf
+    best_valid_t = None
+    best_valid_score = -np.inf
     for t in threshold_grid:
         t = float(t)
         y_pred = (y_proba >= t).astype(int)
@@ -387,6 +412,19 @@ def _select_threshold(
             best_score = score
             best_t = t
 
+        if threshold_min_precision > 0.0 or threshold_min_accuracy > 0.0:
+            precision = precision_score(y_true, y_pred, zero_division=0)
+            accuracy = accuracy_score(y_true, y_pred)
+            if (
+                precision >= threshold_min_precision
+                and accuracy >= threshold_min_accuracy
+                and score > best_valid_score
+            ):
+                best_valid_score = score
+                best_valid_t = t
+
+    if best_valid_t is not None:
+        return float(best_valid_t)
     return float(best_t)
 
 
@@ -429,10 +467,14 @@ def _build_candidate_specs(
             ]
             clf = StackingClassifier(
                 estimators=estimators,
-                final_estimator=LogisticRegression(random_state=seed, class_weight="balanced", max_iter=1000),
+                final_estimator=LogisticRegression(
+                    random_state=seed,
+                    class_weight="balanced",
+                    max_iter=1000,
+                ),
                 cv=5,
                 n_jobs=-1,
-                passthrough=False
+                passthrough=bool(train_cfg.get("stack_passthrough", False)),
             )
             params = train_cfg.get("stacking_param_grid", {})
             if not params:

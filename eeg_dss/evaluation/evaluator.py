@@ -64,7 +64,11 @@ def evaluate_model(
 
     out_dir = cfg.output_dir(task, "reports")
     eval_cfg = cfg.evaluation
-    agg_method = eval_cfg.get("subject_aggregation", "majority_vote")
+    task_eval_cfg = cfg.get("evaluation", task, default={}) or {}
+    agg_method = task_eval_cfg.get(
+        "subject_aggregation",
+        eval_cfg.get("subject_aggregation", "majority_vote"),
+    )
 
     # ── Epoch-level predictions ───────────────────────────────────────────
     proba = model.predict_proba(X_test)[:, 1]

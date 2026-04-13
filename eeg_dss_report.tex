@@ -1,0 +1,401 @@
+\documentclass[12pt,a4paper]{report}
+
+% ---------------------- Packages ----------------------
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{graphicx}
+\usepackage{titlesec}
+\usepackage{fancyhdr}
+\usepackage{geometry}
+\usepackage{setspace}
+\usepackage{xcolor}
+\usepackage{enumitem}
+\usepackage{float}
+\usepackage{listings}
+\usepackage{ragged2e}
+\usepackage{tocbibind}
+\usepackage{hyperref}
+
+\geometry{a4paper, margin=1in}
+
+% ---------------------- Chapter style ----------------------
+\titleformat{\chapter}[display]
+  {\centering\huge\bfseries}
+  {\chaptername\ \thechapter}{20pt}{\huge}
+
+% ---------------------- Header/Footer ----------------------
+\fancyhf{}
+\fancyfoot[R]{\thepage}
+\pagestyle{plain}
+
+% ---------------------- Listing style ----------------------
+\lstset{
+  language=Python,
+  basicstyle=\ttfamily\small,
+  keywordstyle=\color{blue},
+  commentstyle=\color{teal},
+  stringstyle=\color{magenta},
+  breaklines=true,
+  breakatwhitespace=false,
+  frame=single,
+  numbers=left,
+  numberstyle=\tiny,
+  tabsize=4,
+  showstringspaces=false
+}
+
+% ---------------------- Safe image helper ----------------------
+\newcommand{\safeimage}[3]{%
+  \IfFileExists{#1}{%
+    \includegraphics[width=#2\textwidth]{#1}
+  }{%
+    \fbox{\parbox[c][5cm][c]{0.9\textwidth}{\centering Placeholder for #3\\(add file: #1)}}
+  }%
+}
+
+\begin{document}
+\doublespacing
+\pagenumbering{roman}
+
+% ====================== Title Page ======================
+\begin{titlepage}
+    \begin{center}
+        \vspace*{1.5cm}
+        {\LARGE\textbf{EEG DECISION SUPPORT SYSTEM FOR ALZHEIMER'S AND DEPRESSION SCREENING}}\\[1cm]
+        {\Large\textbf{Mini Project Report}}\\[0.5cm]
+        Submitted in partial fulfillment of requirements for awarding the degree\\[0.5cm]
+        {\Large\textbf{BACHELOR OF TECHNOLOGY}}\\[0.5cm]
+        in\\[0.5cm]
+        {\Large\textbf{COMPUTER SCIENCE AND ENGINEERING (DATA SCIENCE)}}\\[1cm]
+        {\Large\textbf{APJ ABDUL KALAM TECHNOLOGICAL UNIVERSITY}}\\[0.7cm]
+        by\\[0.3cm]
+        \textbf{STUDENT NAME 1} (ROLL NO)\\
+        \textbf{STUDENT NAME 2} (ROLL NO)\\
+        \textbf{STUDENT NAME 3} (ROLL NO)\\[1cm]
+
+        \safeimage{college_logo.png}{0.28}{College Logo}\\[1cm]
+
+        \textbf{Department of Computer Science and Engineering}\\
+        \textbf{COLLEGE NAME (Autonomous), CITY}\\
+        \textbf{APRIL 2026}
+    \end{center}
+\end{titlepage}
+\thispagestyle{empty}
+
+% ====================== Certificate ======================
+\begin{center}
+\textbf{\Large DEPARTMENT OF COMPUTER SCIENCE AND ENGINEERING}\\[0.4cm]
+\textbf{\Large COLLEGE NAME (AUTONOMOUS)}\\[0.4cm]
+\textbf{\Large CITY}\\[0.8cm]
+\safeimage{college_logo.png}{0.25}{College Logo}\\[0.8cm]
+\end{center}
+
+\justifying
+This is to certify that the report entitled \textbf{EEG Decision Support System for Alzheimer's and Depression Screening} submitted by \textbf{STUDENT NAME(S)} in partial fulfillment of the requirement for the award of Degree of Bachelor of Technology in Computer Science and Engineering (Data Science) from APJ Abdul Kalam Technological University for APRIL 2026 is a bonafide record of the project carried out under our supervision and guidance.
+
+\vspace{1cm}
+\noindent \textbf{Project Guide} \hfill \textbf{Project Coordinator} \\
+
+\vspace{2cm}
+\noindent \textbf{Internal Examiner(s)} \hfill \textbf{External Examiner(s)}\\
+
+\vspace{1cm}
+\noindent \textbf{Date:} \hfill \textbf{Dept. Seal}
+
+\thispagestyle{empty}
+\clearpage
+
+% ====================== Declaration ======================
+\begin{center}
+    \textbf{\Huge DECLARATION}
+\end{center}
+
+\normalsize
+\justifying
+We hereby declare that the project report \textbf{EEG Decision Support System for Alzheimer's and Depression Screening}, submitted for partial fulfillment of the requirements for the award of the degree of Bachelor of Technology of APJ Abdul Kalam Technological University, Kerala, is a bonafide work carried out by us under the supervision of \textbf{PROJECT GUIDE NAME}. This submission represents our original work and all external ideas, methods, and sources have been appropriately acknowledged.
+
+\vspace{2cm}
+\noindent Date: DD.MM.2026 \hfill \textbf{STUDENT NAME 1}\\
+\noindent Place: CITY \hfill \textbf{STUDENT NAME 2}\\
+\hspace*{\fill} \textbf{STUDENT NAME 3}
+
+\thispagestyle{empty}
+\clearpage
+
+% ====================== Acknowledgement ======================
+\setcounter{page}{1}
+\chapter*{ACKNOWLEDGEMENT}
+\addcontentsline{toc}{chapter}{ACKNOWLEDGEMENT}
+
+\justifying
+We express our sincere gratitude to our project guide, department faculty, and institution for their continuous support and guidance. We also thank our friends and family for encouragement throughout the design, implementation, and validation of this project. Their support was instrumental in completing this work successfully.
+
+\clearpage
+
+% ====================== Abstract ======================
+\chapter*{ABSTRACT}
+\addcontentsline{toc}{chapter}{ABSTRACT}
+\textbf{EEG Decision Support System for Alzheimer's and Depression Screening}\\[0.5cm]
+\justifying
+Neurological and psychiatric disorders such as Alzheimer's disease and Major Depressive Disorder are often associated with subtle but measurable changes in resting-state EEG signals. This project presents a modular, configuration-driven EEG Decision Support System (EEG-DSS) that performs binary screening for both conditions using machine learning. The pipeline includes BIDS-based data loading, EEG preprocessing, feature extraction, model training, and subject-level evaluation. 
+
+The system supports dual-task modeling for Alzheimer's and depression with a unified codebase. Preprocessing includes band-pass filtering, notch filtering, bad-channel handling, re-referencing, and epoching. Feature engineering combines statistical, spectral, complexity, and ratio-based descriptors derived from clinically relevant EEG frequency bands. Models are trained using ensemble methods with cross-validation and threshold tuning to optimize clinically meaningful metrics. 
+
+A Streamlit-based interface enables practical inference from uploaded EEG recordings and provides interpretable output such as disease probabilities, triage decisions, and visual summaries. The proposed framework demonstrates a reproducible workflow for EEG-based decision support and serves as a foundation for future extensions involving multimodal biomarkers and larger clinical cohorts.
+
+\clearpage
+
+% ====================== TOC ======================
+\renewcommand{\contentsname}{CONTENTS}
+\addtocontents{toc}{\protect\setcounter{tocdepth}{-1}}
+\tableofcontents
+\addtocontents{toc}{\protect\setcounter{tocdepth}{2}}
+\clearpage
+
+% ====================== List of Abbreviations ======================
+\chapter*{LIST OF ABBREVIATIONS}
+\addcontentsline{toc}{chapter}{LIST OF ABBREVIATIONS}
+\begin{tabular}{ll}
+EEG & Electroencephalography \\
+BIDS & Brain Imaging Data Structure \\
+MDD & Major Depressive Disorder \\
+CNN & Convolutional Neural Network \\
+LSTM & Long Short-Term Memory \\
+RF & Random Forest \\
+PSD & Power Spectral Density \\
+ICA & Independent Component Analysis \\
+AUC & Area Under ROC Curve \\
+ROC & Receiver Operating Characteristic \\
+API & Application Programming Interface \\
+UI & User Interface \\
+\end{tabular}
+\clearpage
+
+% ====================== Main Content ======================
+\pagenumbering{arabic}
+\fancyhf{}
+\fancyhead[L]{\textbf{EEG Decision Support System}}
+\fancyfoot[R]{\thepage}
+\pagestyle{fancy}
+\singlespacing
+
+\chapter{INTRODUCTION}
+\justifying
+Early screening of neuropsychiatric conditions can improve treatment planning and clinical outcomes. However, manual EEG interpretation is time-consuming and requires expert analysis. This project addresses the need for a reproducible and scalable screening workflow by developing an EEG decision support system for two tasks: Alzheimer's vs control and depression vs control.
+
+The proposed system follows an end-to-end architecture: raw EEG ingestion, preprocessing, feature extraction, model training, evaluation, and deployment through a clinical-style interface. The framework is configuration-driven, which enables reproducibility and easy tuning of preprocessing, features, and model hyperparameters.
+
+\section*{1.1 Problem Statement}
+\addcontentsline{toc}{section}{1.1 Problem Statement}
+\justifying
+To design and implement a robust dual-task EEG machine learning pipeline that can assist in preliminary screening for Alzheimer's disease and Major Depressive Disorder from resting-state EEG recordings.
+
+\section*{1.2 Objectives}
+\addcontentsline{toc}{section}{1.2 Objectives}
+\begin{itemize}
+    \item Build a unified, modular pipeline for both disease tasks.
+    \item Perform EEG preprocessing with configurable quality controls.
+    \item Extract discriminative EEG features spanning multiple domains.
+    \item Train and evaluate subject-level classifiers with threshold tuning.
+    \item Provide an interactive Streamlit application for inference and interpretation.
+\end{itemize}
+
+\chapter{BACKGROUND}
+\section*{2.1 EEG in Clinical Screening}
+\addcontentsline{toc}{section}{2.1 EEG in Clinical Screening}
+\justifying
+EEG captures neural oscillations with high temporal resolution and is widely used in neurological and psychiatric research. Band power changes, asymmetry patterns, and signal complexity are commonly investigated biomarkers in Alzheimer's and depression studies.
+
+\section*{2.2 BIDS and Reproducible Data Handling}
+\addcontentsline{toc}{section}{2.2 BIDS and Reproducible Data Handling}
+\justifying
+The Brain Imaging Data Structure (BIDS) standard improves data organization and interoperability. Using BIDS-compliant datasets simplifies dataset discovery, metadata access, and scalable preprocessing.
+
+\section*{2.3 Machine Learning for EEG}
+\addcontentsline{toc}{section}{2.3 Machine Learning for EEG}
+\justifying
+Traditional machine learning models, especially tree-based ensembles, are effective for tabular EEG feature sets. Hyperparameter search, cross-validation, and calibrated decision thresholds are essential to avoid overfitting and improve generalization.
+
+\chapter{REQUIREMENT SPECIFICATION}
+\section*{3.1 Functional Requirements}
+\addcontentsline{toc}{section}{3.1 Functional Requirements}
+\begin{itemize}
+    \item Load and parse BIDS EEG datasets for both tasks.
+    \item Perform preprocessing and epoch-level quality control.
+    \item Generate feature tables and train task-specific models.
+    \item Evaluate models at epoch and subject levels.
+    \item Run inference on unseen EEG files through a web UI.
+\end{itemize}
+
+\section*{3.2 Non-Functional Requirements}
+\addcontentsline{toc}{section}{3.2 Non-Functional Requirements}
+\begin{itemize}
+    \item Reproducibility through centralized YAML configuration.
+    \item Scalability for large subject counts and multiple tasks.
+    \item Interpretability with feature importance and clear triage output.
+    \item Maintainability using modular package structure.
+\end{itemize}
+
+\section*{3.3 Software Requirements}
+\addcontentsline{toc}{section}{3.3 Software Requirements}
+\begin{itemize}
+    \item Operating System: Windows / Linux / macOS
+    \item Language: Python 3.x
+    \item Libraries: MNE, NumPy, Pandas, scikit-learn, Streamlit
+    \item Configuration: YAML
+\end{itemize}
+
+\section*{3.4 Hardware Requirements}
+\addcontentsline{toc}{section}{3.4 Hardware Requirements}
+\begin{itemize}
+    \item Processor: i5 or above (recommended)
+    \item RAM: 8 GB minimum (16 GB recommended)
+    \item Storage: Sufficient space for BIDS EEG datasets and outputs
+\end{itemize}
+
+\chapter{DESIGN AND IMPLEMENTATION}
+\section*{4.1 System Architecture}
+\addcontentsline{toc}{section}{4.1 System Architecture}
+\begin{figure}[H]
+    \centering
+    \safeimage{figures/system_architecture.png}{0.95}{System Architecture}
+    \caption{EEG-DSS end-to-end architecture}
+\end{figure}
+
+\section*{4.2 Pipeline Modules}
+\addcontentsline{toc}{section}{4.2 Pipeline Modules}
+\begin{itemize}
+    \item Configuration loader: central control through config.yaml.
+    \item Data loader: BIDS discovery and harmonized EEG loading.
+    \item Preprocessing: filtering, bad-channel handling, epoching.
+    \item Feature extraction: statistical, spectral, complexity, asymmetry, ratios.
+    \item Training: model selection, CV search, threshold tuning.
+    \item Evaluation: confusion matrix, ROC, feature importance, JSON reports.
+    \item Prediction: single-file inference with triage decision logic.
+\end{itemize}
+
+\section*{4.3 User Interface}
+\addcontentsline{toc}{section}{4.3 User Interface}
+\justifying
+A Streamlit application supports clinical-style usage with one-file EEG upload, model probability display, decision rationale, and optional scalp visualizations. This enables quick, user-friendly interaction without command-line operations.
+
+\begin{figure}[H]
+    \centering
+    \safeimage{figures/streamlit_ui.png}{0.95}{Streamlit Interface}
+    \caption{EEG-DSS Streamlit interface}
+\end{figure}
+
+\chapter{PERFORMANCE EVALUATION}
+\section*{5.1 Evaluation Strategy}
+\addcontentsline{toc}{section}{5.1 Evaluation Strategy}
+\justifying
+Performance is measured at both epoch and subject levels. Subject-level aggregation improves practical utility for decision support compared to isolated epoch predictions.
+
+\section*{5.2 Metrics}
+\addcontentsline{toc}{section}{5.2 Metrics}
+\begin{itemize}
+    \item Accuracy
+    \item Precision
+    \item Recall
+    \item F1-score
+    \item ROC-AUC
+\end{itemize}
+
+\section*{5.3 Result Placeholders}
+\addcontentsline{toc}{section}{5.3 Result Placeholders}
+\justifying
+Replace the placeholders below with actual plots generated in your outputs folders.
+
+\begin{figure}[H]
+    \centering
+    \safeimage{figures/alzheimer_confusion_matrix.png}{0.75}{Alzheimer Confusion Matrix}
+    \caption{Alzheimer model confusion matrix}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \safeimage{figures/alzheimer_roc_curve.png}{0.75}{Alzheimer ROC Curve}
+    \caption{Alzheimer model ROC curve}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \safeimage{figures/depression_confusion_matrix.png}{0.75}{Depression Confusion Matrix}
+    \caption{Depression model confusion matrix}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \safeimage{figures/depression_roc_curve.png}{0.75}{Depression ROC Curve}
+    \caption{Depression model ROC curve}
+\end{figure}
+
+\chapter{RESULTS AND DISCUSSION}
+\justifying
+The dual-disease design allows a single platform to support multiple clinical screening tasks while preserving task-specific modeling. The configuration-driven architecture simplifies experimentation and reproducibility. Subject-level aggregation improves practical decision support and reduces noise from individual epochs.
+
+\section*{6.1 Observations}
+\addcontentsline{toc}{section}{6.1 Observations}
+\begin{itemize}
+    \item Balanced sampling helps prevent bias in limited-subject experiments.
+    \item Threshold tuning can improve precision-recall trade-offs for clinical use.
+    \item Feature-domain diversity improves robustness compared to single-domain features.
+\end{itemize}
+
+\chapter{FUTURE SCOPE}
+\begin{itemize}
+    \item Integrate deep learning baselines (CNN/LSTM/transformer) for comparison.
+    \item Add multimodal signals (clinical metadata, questionnaire scores, imaging).
+    \item Introduce calibration and uncertainty-aware decision reporting.
+    \item Validate with larger, multi-center EEG cohorts.
+    \item Support longitudinal prediction and progression monitoring.
+\end{itemize}
+
+\chapter{CONCLUSION}
+\justifying
+This work presents a complete EEG decision support framework for Alzheimer's and depression screening. By combining robust preprocessing, interpretable feature engineering, and carefully tuned machine learning models, the system demonstrates a practical and extensible path toward computer-aided EEG screening. The modular design and reproducible workflow enable future research and deployment-oriented enhancements.
+
+\chapter{APPENDIX}
+\section*{A.1 Example Run Commands}
+\begin{lstlisting}[language=bash]
+python scripts/run_pipeline.py --config configs/config.yaml
+python scripts/build_features.py --config configs/config.yaml
+python scripts/train_only.py --config configs/config.yaml
+streamlit run eeg_dss/app/streamlit_app.py -- --config configs/config.yaml
+\end{lstlisting}
+
+\section*{A.2 Core Configuration Snippet}
+\begin{lstlisting}[language=yaml]
+random_seed: 42
+sampling:
+  max_subjects_per_dataset: null
+  balance_classes: true
+preprocessing:
+  target_sfreq: 256
+  bandpass:
+    l_freq: 0.5
+    h_freq: 45.0
+training:
+  tune_threshold: true
+evaluation:
+  subject_aggregation: majority_vote
+\end{lstlisting}
+
+\clearpage
+\chapter*{REFERENCES}
+\addcontentsline{toc}{chapter}{REFERENCES}
+\begin{thebibliography}{9}
+\bibitem{mne}
+A. Gramfort et al., \textit{MNE software for processing MEG and EEG data}, NeuroImage, 2014.
+
+\bibitem{bids}
+K. J. Gorgolewski et al., \textit{The Brain Imaging Data Structure, a format for organizing and describing outputs of neuroimaging experiments}, Scientific Data, 2016.
+
+\bibitem{sklearn}
+F. Pedregosa et al., \textit{Scikit-learn: Machine Learning in Python}, JMLR, 2011.
+
+\bibitem{streamlit}
+Streamlit Documentation. \url{https://docs.streamlit.io/}
+\end{thebibliography}
+
+\end{document}
