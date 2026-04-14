@@ -195,15 +195,20 @@ def _triage_decision(
     gap = abs(alz_score - dep_score)
 
     if int(alz_label) == 0 and int(dep_label) == 0:
+        if top < min_evidence:
+            return {
+                "label": control_label,
+                "reason": "Both disease-specific models are below their diagnostic thresholds.",
+            }
         return {
-            "label": control_label,
-            "reason": "Both disease-specific models are below their diagnostic thresholds.",
+            "label": "Inconclusive",
+            "reason": "Evidence is present but both models remain below diagnostic thresholds.",
         }
 
     if alz_margin < min_alz_margin and dep_margin < min_dep_margin:
         return {
-            "label": control_label,
-            "reason": "Both disease model margins are below minimum disease confidence.",
+            "label": "Inconclusive",
+            "reason": "Both disease model margins are below minimum confidence thresholds.",
         }
 
     if top < min_evidence:
@@ -270,6 +275,9 @@ def _predict_task_from_features(task: str, cfg: Config, feature_df: pd.DataFrame
     scaler = artifact["scaler"]
     feature_names: list[str] = artifact["feature_names"]
     threshold = float(artifact["threshold"])
+    override_cfg = cfg.get("prediction", "threshold_overrides", default={}) or {}
+    if isinstance(override_cfg, dict) and override_cfg.get(task) is not None:
+        threshold = float(override_cfg[task])
 
     aligned_df, alignment_mode = _prepare_inference_features(feature_df, feature_names)
     X = aligned_df[feature_names].values.astype(np.float32)

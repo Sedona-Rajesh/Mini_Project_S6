@@ -228,12 +228,15 @@ app:
   auth_db_path: "outputs/app/users.db"
 
 prediction:
+  threshold_overrides:
+    depression: 0.55
+    alzheimer: 0.48
   triage:
-    min_evidence: 0.10
-    min_separation: 0.10
-    min_model_margin: 0.06
-    min_alzheimer_margin: 0.25
-    min_depression_margin: 0.10
+    min_evidence: 0.0
+    min_separation: 0.01
+    min_model_margin: -0.05
+    min_alzheimer_margin: -0.05
+    min_depression_margin: -0.05
     control_label: "Healthy"
   topomap_bands:
     delta: [0.5, 4.0]

@@ -28,15 +28,22 @@ def _parse_config_arg() -> str:
 
 CONFIG_PATH = _parse_config_arg()
 
+
+def _file_mtime(path: str | Path) -> float:
+    try:
+        return Path(path).stat().st_mtime
+    except FileNotFoundError:
+        return 0.0
+
 # ── Lazy imports (avoid heavy imports at module level for faster cold starts) ─
 @st.cache_resource(show_spinner=False)
-def _load_config(config_path: str):
+def _load_config(config_path: str, config_mtime: float):
     from eeg_dss.config import load_config
     return load_config(config_path)
 
 
 @st.cache_resource(show_spinner=False)
-def _load_artifact(task: str, config_path: str):
+def _load_artifact(task: str, config_path: str, config_mtime: float, artifact_mtime: float):
     from eeg_dss.config import load_config
     from eeg_dss.training.trainer import load_model_artifact
     cfg = load_config(config_path)
@@ -115,12 +122,30 @@ def _render_text_box(text: str, title: str | None = None) -> None:
     st.markdown(f"<div class='neon-box'>{prefix}{text}</div>", unsafe_allow_html=True)
 
 
-cfg = _load_config(CONFIG_PATH)
+config_mtime = _file_mtime(CONFIG_PATH)
+cfg = _load_config(CONFIG_PATH, config_mtime)
 _inject_ui_styles()
 
+with st.sidebar:
+    if st.button("Reload models/config"):
+        st.cache_resource.clear()
+        st.rerun()
+
 try:
-    alz_artifact = _load_artifact("alzheimer", CONFIG_PATH)
-    dep_artifact = _load_artifact("depression", CONFIG_PATH)
+    alz_artifact_path = cfg.output_dir("alzheimer", "artifacts") / "alzheimer_model.pkl"
+    dep_artifact_path = cfg.output_dir("depression", "artifacts") / "depression_model.pkl"
+    alz_artifact = _load_artifact(
+        "alzheimer",
+        CONFIG_PATH,
+        config_mtime,
+        _file_mtime(alz_artifact_path),
+    )
+    dep_artifact = _load_artifact(
+        "depression",
+        CONFIG_PATH,
+        config_mtime,
+        _file_mtime(dep_artifact_path),
+    )
     model_ready = True
 except Exception as e:
     model_ready = False
