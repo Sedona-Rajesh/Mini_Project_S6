@@ -1,0 +1,27 @@
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.venv/
+.env/
+pip-log.txt
+pip-delete-this-directory.txt
+.tox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.log
+.pytest_cache/
+.mypy_cache/
+
+# Ignore raw data files to keep image lightweight!
+data/
+# You may want to ignore outputs/ if models are extremely large, 
+# or mount them via a volume instead. By default we copy outputs/ in the Dockerfile.
+# outputs/

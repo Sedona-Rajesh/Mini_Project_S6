@@ -59,7 +59,7 @@ def _inject_ui_styles() -> None:
                 radial-gradient(circle at 10% 10%, rgba(0, 255, 214, 0.08), transparent 30%),
                 radial-gradient(circle at 90% 20%, rgba(0, 173, 255, 0.10), transparent 35%),
                 linear-gradient(180deg, #0b1020 0%, #0f172a 100%);
-            color: #dbe8ff;
+            color: #ffffff;
         }
         .block-container { padding-top: 1.2rem; }
         .clinic-card {
@@ -77,7 +77,7 @@ def _inject_ui_styles() -> None:
             letter-spacing: 0.02em;
             border: 1px solid rgba(57, 255, 20, 0.8);
             background: rgba(57, 255, 20, 0.12);
-            color: #b7ff9b;
+            color: #ffffff;
             box-shadow: 0 0 14px rgba(57, 255, 20, 0.35);
         }
         .neon-box {
@@ -86,10 +86,10 @@ def _inject_ui_styles() -> None:
             border-radius: 10px;
             padding: 0.75rem 0.9rem;
             margin: 0.35rem 0 0.6rem 0;
-            color: #d5e8ff;
+            color: #ffffff;
         }
         .neon-box b {
-            color: #8ce9ff;
+            color: #cceeff;
         }
         .stButton > button, .stDownloadButton > button {
             background: linear-gradient(90deg, #00ffd6, #00adff) !important;
