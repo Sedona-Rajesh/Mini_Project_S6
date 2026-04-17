@@ -518,42 +518,38 @@ def _build_clinical_recommendations(
     gap = float(abs(alz_score - dep_score))
 
     urgency = "Routine follow-up"
-    if gap >= 0.15:
+    if gap >= 0.15 and label != "Healthy":
         urgency = "Priority specialist review"
     elif label == "Inconclusive":
         urgency = "Early repeat assessment"
 
     common_steps = [
-        "Correlate EEG findings with structured clinical interview and neurological/psychiatric examination.",
-        "Review medication, sleep quality, substance use, and acute stressors that can alter EEG rhythms.",
-        "Verify signal quality and montage coverage before final diagnostic decisions.",
+        "Correlate EEG results with clinical history, medication, and neurological examination.",
     ]
 
     if label == "Alzheimer":
         targeted = [
             "Arrange cognitive screening and comprehensive neuropsychological assessment.",
-            "Consider dementia workup with structural imaging and laboratory exclusion panel.",
-            "Plan neurology or memory-clinic referral for confirmatory diagnostic pathway.",
+            "Plan neurology or memory-clinic referral for a confirmatory diagnostic pathway.",
         ]
         if slowing > 0.1 or post_alz > 0.1:
-            targeted.append(
-                "Posterior slowing pattern is relatively pronounced; prioritize evaluation for neurodegenerative etiology."
-            )
+            targeted.append("Prioritize evaluation for neurodegenerative etiology due to posterior slowing.")
     elif label == "Depression":
         targeted = [
-            "Complete depression severity scoring and risk assessment (including suicidality as clinically indicated).",
-            "Coordinate psychiatry consultation for treatment planning (psychotherapy/pharmacotherapy options).",
-            "Schedule short-interval follow-up to track symptom trajectory and treatment response.",
+            "Complete depression severity scoring and clinical risk assessment.",
+            "Coordinate psychiatry consultation for treatment planning and follow-up.",
         ]
         if front_dep > 0.1 or temp_dep > 0.1:
-            targeted.append(
-                "Frontal-temporal evidence is relatively elevated; monitor affective and executive symptom domains closely."
-            )
-    else:
+            targeted.append("Monitor affective and executive symptom domains closely.")
+    elif label == "Healthy":
         targeted = [
-            "Do not anchor diagnosis on current EEG alone; evidence is not clearly separable between disease models.",
-            "Repeat EEG under controlled conditions and compare with longitudinal clinical findings.",
-            "Use multidisciplinary review (neurology + psychiatry) before assigning disease-specific label.",
+            "Continue routine clinical monitoring; no specific disease-related EEG patterns detected.",
+            "Maintain healthy sleep and lifestyle habits to support brain health.",
+        ]
+    else:  # Inconclusive
+        targeted = [
+            "Repeat EEG under controlled conditions; evidence is currently not clearly separable.",
+            "Use multidisciplinary review before assigning a disease-specific label.",
         ]
 
     return {
